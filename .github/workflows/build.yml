@@ -10,6 +10,7 @@ on:
       - 'buildSrc/**'
       - 'build.py'
       - 'gradle.properties'
+      - '.github/workflows/build.yml'
   pull_request:
     branches: [ master ]
   workflow_dispatch:
@@ -71,14 +72,40 @@ jobs:
           path: ${{ env.ANDROID_SDK_ROOT }}/ndk/magisk
           key: ${{ runner.os }}-ndk-${{ env.MAGISK_NDK_VERSION }}
 
+      - name: Ccache
+        id: ccache-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-ccache-
+
+      - name: Download ccache
+        id: ccache
+        shell: cmake -P {0}
+        env:
+            CCACHE_VERSION: 4.2.1
+        run: |
+          set(ccache_url "https://github.com/cristianadam/ccache/releases/download/v$ENV{CCACHE_VERSION}/${{ runner.os }}.tar.xz")
+          file(DOWNLOAD "${ccache_url}" ./ccache.tar.xz SHOW_PROGRESS)
+          execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ./ccache.tar.xz)
+
       - name: Set up NDK
         if: steps.ndk-cache.outputs.cache-hit != 'true'
         run: python build.py ndk
 
       - name: Build release
+        env:
+            NDK_CCACHE: ${{ github.workspace }}/ccache
+            USE_CCACHE: 1
+            CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: python build.py -vr all
 
       - name: Build debug
+        env:
+            NDK_CCACHE: ${{ github.workspace }}/ccache
+            USE_CCACHE: 1
+            CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: python build.py -v all
 
       # Only upload artifacts built on Linux
