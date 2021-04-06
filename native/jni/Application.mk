@@ -8,6 +8,7 @@ APP_PLATFORM := android-16
 
 ifdef MAGISK_DEBUG
 APP_CFLAGS += -D__MDBG
+APP_STRIP_MODE := --strip-unneeded -w -K '!_ZNSt*' -K '!_ZNKSt*' -K '!_ZTVNSt*' -K '!__*' -K '!.*' -K '*'
 endif
 
 # Build 64 bit binaries
